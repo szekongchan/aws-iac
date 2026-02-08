@@ -1,0 +1,229 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  CloudFormation template to deploy a Flask application stack similar to the
+  AWS CLI instructions in coaching1_3/README.md. Creates a VPC, public subnets,
+  an Internet Gateway and routing, Security Group, EC2 Launch Template, an
+  Auto Scaling Group, and a target tracking scaling policy.
+
+Parameters:
+  YourName:
+    Type: String
+    Description: "Name prefix to tag resources (e.g. 'sk')"
+    Default: sk
+
+  KeyName:
+    Type: String
+    Description: "Existing EC2 KeyPair name to use for instances (create via CLI or console)"
+
+  AMIId:
+    Type: String
+    Description: "AMI ID for EC2 instances (example: latest Amazon Linux 2023 AMI). Provide the AMI ID for your region."
+
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    Description: "EC2 instance type"
+
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+
+  Subnet1Cidr:
+    Type: String
+    Default: 10.0.1.0/24
+
+  Subnet2Cidr:
+    Type: String
+    Default: 10.0.2.0/24
+
+  SSHLocation:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: "CIDR range allowed to SSH into instances"
+
+  FlaskPort:
+    Type: Number
+    Default: 8080
+    Description: "Port the Flask app listens on"
+
+  MinSize:
+    Type: Number
+    Default: 1
+
+  MaxSize:
+    Type: Number
+    Default: 2
+
+  DesiredCapacity:
+    Type: Number
+    Default: 1
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${YourName}-flask-vpc"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${YourName}-flask-igw"
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref Subnet1Cidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${YourName}-flask-subnet-1"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref Subnet2Cidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${YourName}-flask-subnet-2"
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${YourName}-flask-rt"
+
+  RouteToInternet:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  RouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref RouteTable
+
+  RouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref RouteTable
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Security group for ${YourName} flask instances"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: tcp
+          FromPort: !Ref FlaskPort
+          ToPort: !Ref FlaskPort
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${YourName}-flask-launch-template-sg"
+
+  FlaskLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${YourName}-flask-launch-template"
+      LaunchTemplateData:
+        ImageId: !Ref AMIId
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroup
+        UserData: !Base64 |
+          #!/bin/bash
+          yum update -y
+          yum install python3-pip git -y
+          pip3 install flask gunicorn
+
+          git clone https://github.com/jaezeu/flask-app.git
+          cd flask-app
+          nohup gunicorn -b 0.0.0.0:8080 app:app &
+
+  FlaskAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "${YourName}-flask-asg"
+      LaunchTemplate:
+        LaunchTemplateId: !Ref FlaskLaunchTemplate
+        Version: !GetAtt FlaskLaunchTemplate.LatestVersionNumber
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      DesiredCapacity: !Ref DesiredCapacity
+      VPCZoneIdentifier:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      HealthCheckType: EC2
+      HealthCheckGracePeriod: 300
+      Tags:
+        - Key: Name
+          Value: !Sub "${YourName}-flask-instance"
+          PropagateAtLaunch: true
+
+  CPUTargetTrackingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref FlaskAutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 50.0
+
+Outputs:
+  VpcId:
+    Description: VPC Id
+    Value: !Ref VPC
+
+  Subnet1Id:
+    Description: Public Subnet 1 Id
+    Value: !Ref PublicSubnet1
+
+  Subnet2Id:
+    Description: Public Subnet 2 Id
+    Value: !Ref PublicSubnet2
+
+  SecurityGroupId:
+    Description: Security group for instances
+    Value: !Ref InstanceSecurityGroup
+
+  LaunchTemplateId:
+    Description: Launch Template
+    Value: !Ref FlaskLaunchTemplate
+
+  AutoScalingGroupName:
+    Description: Auto Scaling Group name
+    Value: !Ref FlaskAutoScalingGroup
+
+# Notes:
+# - CloudFormation cannot create a private key file like 'aws ec2 create-key-pair' does.
+#   Provide an existing KeyPair name in the KeyName parameter (or import a public key).
+# - For AMI selection, pass the AMIId parameter when creating the stack or use an
+#   SSM parameter dynamic reference for your region's Amazon Linux 2023 AMI.
