@@ -1,4 +1,23 @@
-hello-prometheus/main.tf.bak
-learn-terraform-get-started-aws/.terraform.lock.hcl
-learn-terraform-get-started-aws/terraform.tfstate
-learn-terraform-get-started-aws/terraform.tfstate.backup
+# Terraform files
+**/.terraform/*
+**/.terraform.lock.hcl
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfvars
+**/*.tfvars.json
+**/.terraformrc
+**/terraform.rc
+**/crash.log
+**/crash.*.log
+**/override.tf
+**/override.tf.json
+**/*_override.tf
+**/*_override.tf.json
+
+# CloudFormation
+**/.aws-sam/
+**/packaged.yaml
+**/packaged.yml
+**/packaged.json
+**/.cfn-lint-ignore
+
