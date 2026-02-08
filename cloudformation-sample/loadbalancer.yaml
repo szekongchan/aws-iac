@@ -1,0 +1,208 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >-
+  CloudFormation template for module 1.9.
+  Author: Chan Sze Kong
+
+Parameters:
+  YourName:
+    Type: String
+    Description: "Name prefix to tag resources"
+    Default: sk
+
+  KeyName:
+    Type: String
+    Description: "Existing EC2 KeyPair name to use for instances (create via CLI or console)"
+
+  AMIId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Description: The latest Amazon Linux 2 AMI from the Parameter Store
+    Default: "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: "EC2 instance type"
+
+  VpcCidr:
+    Type: String
+    Default: 172.31.0.0/16
+
+  Subnet1Cidr:
+    Type: String
+    Default: 172.31.0.0/20
+
+  Subnet2Cidr:
+    Type: String
+    Default: 172.31.16.0/20
+
+  Subnet3Cidr:
+    Type: String
+    Default: 172.31.32.0/20
+
+  SSHLocation:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: "CIDR range allowed to SSH into instances"
+
+  HTTPPort:
+    Type: Number
+    Default: 80
+    Description: "Port the app listens on"
+
+  MinSize:
+    Type: Number
+    Default: 2
+
+  MaxSize:
+    Type: Number
+    Default: 2
+
+  DesiredCapacity:
+    Type: Number
+    Default: 2
+
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: "Existing VPC ID where instances and subnets reside"
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: "Public Subnet 1 (Subnet ID) for the Auto Scaling Group"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: "Public Subnet 2 (Subnet ID) for the Auto Scaling Group"
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet::Id
+    Description: "Public Subnet 3 (Subnet ID) for the Auto Scaling Group (optional)"
+
+Resources:
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Security group for ${YourName} HTTP instances"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: tcp
+          FromPort: !Ref HTTPPort
+          ToPort: !Ref HTTPPort
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${YourName}-http-sg"
+
+  HTTPLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${YourName}-http-template"
+      LaunchTemplateData:
+        ImageId: !Ref AMIId
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroup
+        MetadataOptions:
+          HttpTokens: optional
+          HttpPutResponseHopLimit: 1
+          HttpEndpoint: enabled
+        UserData: !Base64 |
+          #!/bin/bash
+          yum update -y
+          yum install httpd -y
+          echo "<h1>Hello from Instance $(curl -s http://169.254.169.254/latest/meta-data/instance-id)</h1>" | sudo tee /var/www/html/index.html
+          systemctl start httpd
+          systemctl enable httpd
+
+  HTTPAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "${YourName}-alb-asg"
+      LaunchTemplate:
+        LaunchTemplateId: !Ref HTTPLaunchTemplate
+        Version: !GetAtt HTTPLaunchTemplate.LatestVersionNumber
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      DesiredCapacity: !Ref DesiredCapacity
+      # VPCZoneIdentifier: list of subnet IDs where the Auto Scaling Group should launch instances.
+      # Each item should be a subnet id (for example, !Ref PublicSubnet1). Ensure these subnets are in the same VPC as `VPC`.
+      VPCZoneIdentifier:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+        - !Ref PublicSubnet3
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
+      TargetGroupARNs:
+        - !Ref HTTPTargetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${YourName}-HTTP-instance"
+          PropagateAtLaunch: true
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "${YourName} ALB security group"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${YourName}-alb-sg"
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${YourName}-alb"
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+        - !Ref PublicSubnet3
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Type: application
+      IpAddressType: ipv4
+
+  HTTPTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${YourName}-tg"
+      VpcId: !Ref VPC
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: "80"
+      HealthCheckPath: "/"
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: "200"
+
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref HTTPTargetGroup
+
+Outputs:
+  LoadBalancerDNS:
+    Description: "ALB DNS name"
+    Value: !GetAtt ApplicationLoadBalancer.DNSName

@@ -1,0 +1,4 @@
+hello-prometheus/main.tf.bak
+learn-terraform-get-started-aws/.terraform.lock.hcl
+learn-terraform-get-started-aws/terraform.tfstate
+learn-terraform-get-started-aws/terraform.tfstate.backup
