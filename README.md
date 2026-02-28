@@ -2,7 +2,7 @@
 
 ## Backend: Hosting terraform.tfstate file in a remote repository to faciliate collabrations
 
-Note: variable, data and local
+Note: variable, data and local cannot be use within terraform blocks
 
 Reference: module2_2/backend.tf
 
