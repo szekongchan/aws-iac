@@ -15,6 +15,7 @@ terraform {
       version = ">= 2.5.0"
     }
   }
+  
   backend "s3" {
     # The name of the S3 bucket (must already exist)
     bucket = "sctp-ce12-tfstate-bucket"
