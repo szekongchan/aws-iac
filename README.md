@@ -1,5 +1,11 @@
 # Terraform Notes
 
+## Table of Contents
+
+- [Backend: Hosting terraform.tfstate file in a remote repository to faciliate collabrations](#backend-hosting-terraformtfstate-file-in-a-remote-repository-to-faciliate-collabrations)
+- [Retrival of ami with SSM](#retrival-of-ami-with-ssm)
+- [Key Pair Generation: Using hashicorp/tls to generate key pair and hashicorp/local to store the pem file in a local folder](#key-pair-generation-using-hashicorptls-to-generate-key-pair-and-hashicorplocal-to-store-the-pem-file-in-a-local-folder)
+
 ## Backend: Hosting terraform.tfstate file in a remote repository to faciliate collabrations
 
 Note: variable, data and local cannot be use within terraform blocks
