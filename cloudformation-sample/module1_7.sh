@@ -34,7 +34,7 @@ Host: ec2-47-129-253-44.ap-southeast-1.compute.amazonaws.com
 # get private ip address
 ec2-metadata --local-ipv4
 
-OR 
+OR
 
 TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4

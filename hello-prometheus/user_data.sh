@@ -12,13 +12,13 @@ dnf install -y git python3-pip httpd
 pip3 install gunicorn flask
 
 # Clone and setup Flask app
-cd /opt
+cd /opt || exit
 git clone https://github.com/szekongchan/sample-flask-app.git flask-app
-cd flask-app
+cd flask-app || exit
 chown -R ec2-user:ec2-user /opt/flask-app
 
 # Create Flask systemd service
-cat > /etc/systemd/system/flask-app.service << 'FLASKSERVICE'
+cat >/etc/systemd/system/flask-app.service <<'FLASKSERVICE'
 [Unit]
 Description=Flask Application with Gunicorn
 After=network.target
@@ -44,12 +44,12 @@ sleep 5
 setsebool -P httpd_can_network_connect 1 || true
 
 # Configure Apache proxy
-cat > /etc/httpd/conf.d/flask_proxy.conf << 'APACHEPROXY'
+cat >/etc/httpd/conf.d/flask_proxy.conf <<'APACHEPROXY'
 <VirtualHost *:80>
     ProxyPreserveHost On
     ProxyPass / http://127.0.0.1:8080/
     ProxyPassReverse / http://127.0.0.1:8080/
-    
+
     ErrorLog /var/log/httpd/flask-error.log
     CustomLog /var/log/httpd/flask-access.log combined
 </VirtualHost>
@@ -59,14 +59,14 @@ systemctl enable httpd
 systemctl start httpd
 
 # Install Grafana
-cat > /etc/yum.repos.d/grafana.repo << 'GRAFANAREPO'
+cat >/etc/yum.repos.d/grafana.repo <<'GRAFANAREPO'
 [grafana]
 name=grafana
 baseurl=https://packages.grafana.com/oss/rpm
 repo_gpgcheck=1
 enabled=1
 gpgcheck=1
-gpgkey=https://packages.grafana.com/gpg.key
+gpgkey=https://packages.grafana.com/gpg.key # pragma: allowlist secret
 sslverify=1
 sslcacert=/etc/pki/tls/certs/ca-bundle.crt
 GRAFANAREPO
@@ -75,7 +75,7 @@ dnf install -y grafana
 
 # Provision Prometheus data source
 mkdir -p /etc/grafana/provisioning/datasources
-cat > /etc/grafana/provisioning/datasources/prometheus.yaml << 'GRAFANADS'
+cat >/etc/grafana/provisioning/datasources/prometheus.yaml <<'GRAFANADS'
 apiVersion: 1
 
 datasources:
@@ -90,7 +90,7 @@ systemctl enable grafana-server
 systemctl start grafana-server
 
 # Download and install node_exporter
-cd /tmp
+cd /tmp || exit
 wget https://github.com/prometheus/node_exporter/releases/download/v1.10.2/node_exporter-1.10.2.linux-amd64.tar.gz
 tar xzf node_exporter-1.10.2.linux-amd64.tar.gz
 rm -rf /etc/node_exporter
@@ -99,7 +99,7 @@ mv node_exporter-1.10.2.linux-amd64 /etc/node_exporter
 useradd -rs /bin/false node_exporter || true
 chown -R node_exporter:node_exporter /etc/node_exporter
 
-cat > /etc/systemd/system/node_exporter.service << 'NODESERVICE'
+cat >/etc/systemd/system/node_exporter.service <<'NODESERVICE'
 [Unit]
 Description=Node Exporter
 After=network.target
@@ -120,7 +120,7 @@ systemctl start node_exporter
 
 # Install and configure Prometheus
 echo "Setting up Prometheus..."
-cd /tmp
+cd /tmp || exit
 wget https://github.com/prometheus/prometheus/releases/download/v2.48.0/prometheus-2.48.0.linux-amd64.tar.gz
 tar xzf prometheus-2.48.0.linux-amd64.tar.gz
 rm -rf /opt/prometheus
@@ -130,7 +130,7 @@ useradd -rs /bin/false prometheus || true
 chown -R prometheus:prometheus /opt/prometheus
 
 # Create Prometheus configuration
-cat > /opt/prometheus/prometheus.yml << PROMCONFIG
+cat >/opt/prometheus/prometheus.yml <<PROMCONFIG
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -141,7 +141,7 @@ scrape_configs:
       - targets: ['localhost:9100']
         labels:
           instance: 'ec2-instance'
-          
+
   - job_name: 'flask_app'
     static_configs:
       - targets: ['localhost:8080']
@@ -152,7 +152,7 @@ PROMCONFIG
 chown prometheus:prometheus /opt/prometheus/prometheus.yml
 
 # Create Prometheus systemd service
-cat > /etc/systemd/system/prometheus.service << 'PROMSERVICE'
+cat >/etc/systemd/system/prometheus.service <<'PROMSERVICE'
 [Unit]
 Description=Prometheus
 After=network.target

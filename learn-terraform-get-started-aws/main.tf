@@ -7,7 +7,8 @@ data "aws_ssm_parameter" "amazon_linux_2023" {
 }
 
 module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 6.0"
 
   name = "sk-vpc"
   cidr = "172.32.0.0/16"

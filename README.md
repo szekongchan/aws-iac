@@ -1,5 +1,7 @@
 # Terraform Notes
 
+[![pre-commit](https://github.com/szekongchan/aws-iac/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/szekongchan/aws-iac/actions/workflows/pre-commit.yml)
+
 ## Table of Contents
 
 - [Backend: Hosting terraform.tfstate file in a remote repository to faciliate collabrations](#backend-hosting-terraformtfstate-file-in-a-remote-repository-to-faciliate-collabrations)
