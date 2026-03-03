@@ -3,6 +3,7 @@ locals {
 }
 
 resource "aws_instance" "public" {
+  count                       = var.instance_count
   ami                         = data.aws_ssm_parameter.amazon_linux_2023.value
   instance_type               = var.instance_type
   subnet_id                   = local.subnet_id
@@ -11,7 +12,7 @@ resource "aws_instance" "public" {
   vpc_security_group_ids      = [aws_security_group.allow_ssh.id]
 
   tags = {
-    Name = "${var.project_name}-ec2"
+    Name = "${var.project_name}-ec2-${count.index + 1}"
   }
 }
 
