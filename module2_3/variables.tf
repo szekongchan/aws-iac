@@ -5,7 +5,7 @@ variable "aws_region" {
 }
 
 variable "project_name" {
-  description = "Environment name"
+  description = "Project name"
   type        = string
   default     = "sk-module2_3"
 }
@@ -17,6 +17,7 @@ variable "instance_type" {
 }
 
 variable "instance_count" {
-  type    = number
-  default = 1
+  description = "Number of EC2 instances to launch"
+  type        = number
+  default     = 1
 }
