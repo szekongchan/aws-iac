@@ -1,6 +1,10 @@
 # Terraform Notes
 
 [![pre-commit](https://github.com/szekongchan/aws-iac/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/szekongchan/aws-iac/actions/workflows/pre-commit.yml)
+![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5-623CE4?logo=terraform&logoColor=white)
+![pre-commit enabled](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-IaC-FF9900?logo=amazonaws&logoColor=white)
+[![Last Commit](https://img.shields.io/github/last-commit/szekongchan/aws-iac)](https://github.com/szekongchan/aws-iac/commits/main)
 
 ## Table of Contents
 
