@@ -25,3 +25,25 @@ variable "vpc_id" {
   description = "ID of the VPC where resources will be created"
   type        = string
 }
+
+variable "public_subnet_ids" {
+  description = "List of public subnet IDs to launch instances in"
+  type        = list(string)
+}
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs to launch instances in"
+  type        = list(string)
+}
+
+variable "lb_listener_arn" {
+  description = "ALB Listener Arn"
+  type        = string
+  default     = ""
+}
+
+variable "lb_listener_path_pattern" {
+  description = "ALB Listener Path Pattern"
+  type        = string
+  default     = "/szekong*"
+}

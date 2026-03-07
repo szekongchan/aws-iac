@@ -1,7 +1,7 @@
 variable "name_prefix" {
   description = "Prefix for resource names"
   type        = string
-  default     = "sk_coaching7"
+  default     = "sk-coaching7"
 }
 
 variable "aws_region" {
@@ -25,7 +25,7 @@ variable "instance_count" {
 variable "public_subnet" {
   description = "Whether to create resources in a public subnet"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "vpc_cidr_block" {
@@ -34,14 +34,14 @@ variable "vpc_cidr_block" {
   default     = "10.88.0.0/16"
 }
 
-variable "public_cidr_block" {
+variable "public_cidr_blocks" {
   description = "CIDR block for the public subnet"
-  type        = string
-  default     = "10.88.1.0/24"
+  type        = list(string)
+  default     = ["10.88.1.0/24", "10.88.2.0/24"]
 }
 
-variable "private_cidr_block" {
+variable "private_cidr_blocks" {
   description = "CIDR block for the private subnet"
-  type        = string
-  default     = "10.88.2.0/24"
+  type        = list(string)
+  default     = ["10.88.3.0/24", "10.88.4.0/24"]
 }
