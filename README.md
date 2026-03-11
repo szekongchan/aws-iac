@@ -8,9 +8,19 @@
 
 ## Table of Contents
 
+### NTU PACE SCTP Cloud Engineering Course
+
 - [Module 2.2: Hello World of HCL + Backend](module2_2/README.md)
 - [Coaching 6: EC2 + KeyPair](coaching6/README.md)
 - [Module 2.3: EC2 Count Parameter + Security Group](module2_3/README.md)
 - Module 2.4: [Using Module](module2_4a) + [Creating Module](module2_4b)
 - [Coaching 7: ALB + TargetGroup](coaching7)
 - [Module 2.5: DynamoDB](module2_5)
+
+### Terraform AWS Tutorial
+
+- [Learn Terrafomr Get Started AWS](learn-terraform-get-started-aws)
+
+#### Self Directed Learning
+
+- [Hello Prometheus](hello-prometheus)
