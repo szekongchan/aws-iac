@@ -15,7 +15,8 @@
 - [Module 2.3: EC2 Count Parameter + Security Group](module2_3/README.md)
 - Module 2.4: [Using Module](module2_4a) + [Creating Module](module2_4b)
 - [Coaching 7: ALB + TargetGroup](coaching7)
-- [Module 2.5: DynamoDB](module2_5)
+- [Module 2.5: DynamoDB](module2_5/README.md)
+- [Module 2.6: IAM for DynamoDB](module2_6)
 
 ### Terraform AWS Tutorial
 
