@@ -20,3 +20,6 @@
 **/packaged.yml
 **/packaged.json
 **/.cfn-lint-ignore
+
+# Logs files
+**/*.log

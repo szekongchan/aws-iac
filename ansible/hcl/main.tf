@@ -1,0 +1,59 @@
+locals {
+  subnet_id = sort(data.aws_subnets.default.ids)[0]
+}
+
+resource "aws_instance" "public" {
+  count                       = var.instance_count
+  ami                         = data.aws_ssm_parameter.amazon_linux_2023.value
+  instance_type               = var.instance_type
+  subnet_id                   = local.subnet_id
+  associate_public_ip_address = true
+  key_name                    = aws_key_pair.keypair.key_name
+  vpc_security_group_ids      = [aws_security_group.allow_ssh.id]
+
+  tags = {
+    Name = "${var.project_name}-ec2-${count.index + 1}"
+  }
+}
+
+resource "aws_security_group" "allow_ssh" {
+  name        = "sk-public-sg"
+  description = "Allow SSH inbound"
+  vpc_id      = data.aws_vpc.default.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_tls_ipv4" {
+  security_group_id = aws_security_group.allow_ssh.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 22
+  ip_protocol       = "tcp"
+  to_port           = 22
+}
+
+# Create private key
+resource "tls_private_key" "key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Generate AWS Key Pair
+resource "aws_key_pair" "keypair" {
+  key_name   = "${var.project_name}-keypair"
+  public_key = tls_private_key.key.public_key_openssh
+}
+
+# Save private key locally
+resource "local_file" "private_key" {
+  content         = tls_private_key.key.private_key_pem
+  filename        = pathexpand("~/.ssh/${var.project_name}-keypair.pem")
+  file_permission = "0400"
+}
+
+resource "local_file" "ansible_inventory" {
+  filename = "${path.module}/../inventory.ini"
+
+  content = templatefile("${path.module}/inventory.tftpl", {
+    hosts   = aws_instance.public[*].public_dns
+    ssh_key = pathexpand("~/.ssh/${var.project_name}-keypair.pem")
+  })
+}

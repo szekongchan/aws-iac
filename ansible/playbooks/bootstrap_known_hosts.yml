@@ -1,0 +1,42 @@
+---
+- name: Add EC2 host keys to local known_hosts
+  hosts: localhost
+  gather_facts: false
+  vars:
+    target_group: "server"
+    known_hosts_path: "{{ lookup('env', 'HOME') + '/.ssh/known_hosts' }}"
+    key_types:
+      - ed25519
+      - ecdsa
+
+  tasks:
+    - name: Ensure ~/.ssh exists
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') + '/.ssh' }}"
+        state: directory
+        mode: "0700"
+
+    - name: Ensure known_hosts file exists
+      ansible.builtin.file:
+        path: "{{ known_hosts_path }}"
+        state: touch
+        mode: "0644"
+
+    - name: Scan host keys for each host and key type
+      ansible.builtin.command: "ssh-keyscan -t {{ item.1 }} {{ item.0 }}"
+      loop: "{{ (groups[target_group] | default([])) | product(key_types) | list }}"
+      register: scanned_keys
+      changed_when: false
+      failed_when: false
+
+    - name: Add scanned keys to known_hosts
+      ansible.builtin.known_hosts:
+        path: "{{ known_hosts_path }}"
+        name: "{{ item.item.0 }}"
+        key: "{{ (item.stdout_lines | reject('match', '^#') | list | first) }}"
+        hash_host: true
+        state: present
+      loop: "{{ scanned_keys.results }}"
+      when:
+        - item.rc == 0
+        - (item.stdout_lines | reject('match', '^#') | list | length) > 0
