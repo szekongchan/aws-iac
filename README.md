@@ -17,6 +17,7 @@
 - [Coaching 7: ALB + TargetGroup](coaching7)
 - [Module 2.5: DynamoDB](module2_5/README.md)
 - [Module 2.6: IAM for DynamoDB](module2_6)
+- [Coaching 8: EC2 + DynamoDB Module](coaching8/README.md)
 
 ### Terraform AWS Tutorial
 

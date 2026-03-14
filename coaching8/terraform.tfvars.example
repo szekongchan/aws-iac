@@ -1,0 +1,8 @@
+# Copy this file to terraform.tfvars and replace with your own VPC Name tag.
+vpc_name = "ce-learner-vpc"
+
+enable_dynamodb = true
+enable_rds      = true
+
+# Choose which EC2 IAM policy option to attach: option1, option2, or option3
+ec2_role_policy_option = "option1"
