@@ -16,25 +16,32 @@ resource "aws_iam_role" "ec2-role" {
   })
 }
 
+resource "aws_iam_instance_profile" "profile_ec2" {
+  name = "${var.project_name}-profile-ec2"
+  role = aws_iam_role.ec2-role.name
+}
+
+resource "aws_iam_role_policy_attachment" "attach_ec2_role" {
+  role       = aws_iam_role.ec2-role.name
+  policy_arn = local.ec2_role_policy_arn_by_option[var.ec2_role_policy_option]
+}
+
+resource "aws_iam_role_policy_attachment" "attach_dynamodb" {
+  role       = aws_iam_role.ec2-role.name
+  policy_arn = aws_iam_policy.dynamodb_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_attach" {
+  role       = aws_iam_role.ec2-role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 # WARM UP Policy with EC2 Describe and S3 List permissions
 locals {
   ec2_role_policy_arn_by_option = {
     option1 = aws_iam_policy.policy_option1.arn
     option2 = aws_iam_policy.policy_option2.arn
     option3 = aws_iam_policy.policy_option3.arn
-  }
-}
-
-data "aws_iam_policy_document" "policy_option1_doc" {
-  statement {
-    effect    = "Allow"
-    actions   = ["ec2:Describe*"]
-    resources = ["*"]
-  }
-  statement {
-    effect    = "Allow"
-    actions   = ["s3:ListAllMyBuckets"]
-    resources = ["*"]
   }
 }
 
@@ -89,67 +96,7 @@ resource "aws_iam_policy" "policy_option3" {
    POLICY
 }
 
-resource "aws_iam_role_policy_attachment" "attach_ec2_role" {
-  role       = aws_iam_role.ec2-role.name
-  policy_arn = local.ec2_role_policy_arn_by_option[var.ec2_role_policy_option]
-}
-
-resource "aws_iam_instance_profile" "profile_ec2" {
-  name = "${var.project_name}-profile-ec2"
-  role = aws_iam_role.ec2-role.name
-}
-
-# ACTIVITY 1 Policy for DynamoDB access
-data "aws_iam_policy_document" "dynamodb_policy_doc" {
-  statement {
-    effect = "Allow"
-    actions = [
-      "dynamodb:DescribeImport",
-      "dynamodb:ListTables",
-      "dynamodb:DescribeContributorInsights",
-      "dynamodb:ListTagsOfResource",
-      "dynamodb:GetAbacStatus",
-      "dynamodb:DescribeReservedCapacityOfferings",
-      "dynamodb:PartiQLSelect",
-      "dynamodb:DescribeTable",
-      "dynamodb:GetItem",
-      "dynamodb:DescribeContinuousBackups",
-      "dynamodb:DescribeExport",
-      "dynamodb:ListImports",
-      "dynamodb:GetResourcePolicy",
-      "dynamodb:DescribeKinesisStreamingDestination",
-      "dynamodb:ListExports",
-      "dynamodb:DescribeLimits",
-      "dynamodb:BatchGetItem",
-      "dynamodb:ReadDataForReplication",
-      "dynamodb:ConditionCheckItem",
-      "dynamodb:ListBackups",
-      "dynamodb:Scan",
-      "dynamodb:Query",
-      "dynamodb:DescribeStream",
-      "dynamodb:DescribeTimeToLive",
-      "dynamodb:ListStreams",
-      "dynamodb:ListContributorInsights",
-      "dynamodb:DescribeGlobalTableSettings",
-      "dynamodb:ListGlobalTables",
-      "dynamodb:GetShardIterator",
-      "dynamodb:DescribeGlobalTable",
-      "dynamodb:DescribeReservedCapacity",
-      "dynamodb:DescribeBackup",
-      "dynamodb:DescribeEndpoints",
-      "dynamodb:GetRecords",
-      "dynamodb:DescribeTableReplicaAutoScaling"
-    ]
-    resources = ["*"]
-  }
-}
-
 resource "aws_iam_policy" "dynamodb_policy" {
   name   = "${var.project_name}-dynamodb-policy"
   policy = data.aws_iam_policy_document.dynamodb_policy_doc.json
-}
-
-resource "aws_iam_role_policy_attachment" "attach_dynamodb" {
-  role       = aws_iam_role.ec2-role.name
-  policy_arn = aws_iam_policy.dynamodb_policy.arn
 }

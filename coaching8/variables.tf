@@ -10,10 +10,10 @@ variable "project_name" {
   default     = "sk-coaching8"
 }
 
-variable "vpc_name" {
-  description = "VPC Name tag used by modules"
-  type        = string
-}
+# variable "vpc_name" {
+#   description = "VPC Name tag used by modules"
+#   type        = string
+# }
 
 variable "ec2_instance_type" {
   description = "EC2 instance type for all servers"
@@ -30,7 +30,7 @@ variable "rds_instance_type" {
 variable "enable_dynamodb" {
   description = "Set to true to create DynamoDB resources"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_rds" {
